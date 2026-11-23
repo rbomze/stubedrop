@@ -71,7 +71,10 @@ public class MainActivity extends Activity {
 
         // url
         l.addView(heading("Your drop URLs"));
-        l.addView(text("Call one of these from any device on the same network. GET: put url and t in the query string and URL-encode the link if it contains &. POST: send the link as the request body (no escaping needed) and the password as ?t=… in the URL, e.g. POST /?t=PASSWORD with body https://youtu.be/VIDEO_ID. Both work on the same port. Use testurl instead of a link to check the connection and password without starting a video.", 14, false));
+        l.addView(text("Any device on the same network can send a link, with either method on the same port:\n\n"
+          + "POST (recommended): the link is the request body, so it needs no URL-escaping, and the password goes in the X-Token header, so it never appears in a URL or log.\n\n"
+          + "GET: everything is in the URL: url=<link> and t=<password>. The link must be URL-escaped (for example & becomes %26).\n\n"
+          + "Use testurl instead of a link to check the connection and password without starting a video.", 14, false));
         l.addView(text("Plain HTTP", 14, true));
         urlView = text("", 15, false);
         urlView.setTypeface(Typeface.MONOSPACE);
@@ -89,7 +92,10 @@ public class MainActivity extends Activity {
 
         // usage
         l.addView(heading("How to use"));
-        l.addView(text("Intended flow: find a video in an app such as PipePipe on your phone, tap Share, pick the 'HTTP Shortcuts' app, and the video starts on this TV in SmartTube.", 14, false));
+        l.addView(text("Intended flow: find a video in an app such as PipePipe on your phone, tap Share, pick a sender, and the video starts on this TV in SmartTube. Three ways to send:\n\n"
+          + "• S-Tube Drop Sender, the companion app for Android phones: share a link to it. Enter this TV's IP, the port and the password once, and trust the certificate.\n"
+          + "• The S-Tube Drop Firefox / LibreWolf extension: click its button in the address bar on a YouTube video page.\n"
+          + "• HTTP Shortcuts, a general-purpose Android app (free, open source): setup below.", 14, false));
         howView = text("", 14, false);
         howView.setPadding(0, dp(8), 0, 0);
         l.addView(howView);
@@ -169,27 +175,29 @@ public class MainActivity extends Activity {
         urlView.setText(dropUrl("http"));
         httpsView.setText(dropUrl("https"));
         certView.setText("Certificate fingerprint (SHA-256):\n" + TlsSupport.fingerprint());
+        String base = "http://" + localIp() + ":" + p.getInt("port", 8765) + "/";
         howView.setText(
-            "Set up HTTP Shortcuts (free, open source) on your phone once:\n\n"
-          + "1. Variables → add a variable of type Text, name it  link . Enable the option that lets the Share dialog set its value, and disable 'remember value'.\n\n"
-          + "2. Create a shortcut, either with GET or (recommended) POST:\n\n"
-          + "   POST: the link goes in the request body, so it needs no URL-escaping.\n"
+            "Setting up HTTP Shortcuts on your phone (once):\n\n"
+          + "1. Open Variables and add a variable of type Text named  link . Enable the option that lets the Share dialog set its value, and disable 'Remember value'.\n\n"
+          + "2. Create a shortcut with these settings (POST, recommended):\n"
           + "   • Method: POST\n"
-          + "   • URL: http://" + localIp() + ":" + p.getInt("port", 8765) + "/?t=" + p.getString("token", "changeme") + "\n"
-          + "   • Request body: Custom text, content type text/plain, containing just  {link}  (the variable). A form body  url={link}&t=…  with content type application/x-www-form-urlencoded also works, but then the link must be escaped.\n\n"
-          + "   GET: everything in the query string, so the link must be URL-escaped.\n"
+          + "   • URL: " + base + "\n"
+          + "   • Headers: add  X-Token  with the value  " + p.getString("token", "changeme") + "\n"
+          + "   • Request body: Custom text, content type text/plain, containing only  {link}  (insert the variable). No escaping needed.\n\n"
+          + "   Or with GET:\n"
           + "   • Method: GET\n"
-          + "   • URL: http://" + localIp() + ":" + p.getInt("port", 8765) + "/\n"
-          + "   • Request parameters:\n"
-          + "        url = {link}   (insert the variable)\n"
-          + "        t = " + p.getString("token", "changeme") + "\n\n"
-          + "3. In PipePipe (or the YouTube app, a browser…) open a video, tap Share and choose HTTP Shortcuts, then your shortcut.\n\n"
+          + "   • URL: " + base + "\n"
+          + "   • Request parameters:  url = {link}  and  t = " + p.getString("token", "changeme") + "\n"
+          + "   HTTP Shortcuts escapes parameter values for you.\n\n"
+          + "3. In PipePipe (or the YouTube app, a browser…) open a video, tap Share, choose HTTP Shortcuts, then your shortcut.\n\n"
+          + "The URL above is plain HTTP. HTTPS needs HTTP Shortcuts to accept this TV's self-signed certificate; the S-Tube Drop Sender app and the extension handle that for you.\n\n"
           + "Notes: only youtube.com, youtu.be and music.youtube.com links are accepted. Give the TV a fixed IP in your router, or the shortcut stops working when the address changes. The phone must be on the same network.");
     }
 
     private String dropUrl(String scheme) {
-        return scheme + "://" + localIp() + ":" + p.getInt("port", 8765)
-            + "/?url=https://youtu.be/VIDEO_ID&t=" + p.getString("token", "changeme");
+        String base = scheme + "://" + localIp() + ":" + p.getInt("port", 8765) + "/";
+        String tk = p.getString("token", "changeme");
+        return "POST " + base + "\nX-Token: " + tk + "\nbody: https://youtu.be/VIDEO_ID\n\nGET " + base + "?url=https://youtu.be/VIDEO_ID&t=" + tk;
     }
 
     private static String localIp() {

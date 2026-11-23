@@ -37,24 +37,24 @@ const TRUST_MSG = "Trust the TV's certificate first: click â€œTrust certificateâ
 // POST sends the link as the request body (no URL-escaping needed); GET puts it in the query.
 const isPost = (cfg) => cfg.method !== "GET";
 
-// The URL that is requested; for POST the link is not part of it.
+// The URL that is requested; for POST neither the link (body) nor the password (X-Token header) is in it.
 function buildDropUrl(cfg, videoUrl) {
   const base = `${scheme(cfg)}://${cfg.ip || "<tv-ip>"}:${cfg.port}/`;
-  if (isPost(cfg)) return base + "?" + new URLSearchParams({ t: cfg.token });
+  if (isPost(cfg)) return base;
   return base + "?" + new URLSearchParams({ url: videoUrl || "https://youtu.be/VIDEO_ID", t: cfg.token });
 }
 
 // The whole request as text, for display.
 function describeRequest(cfg, videoUrl) {
   const link = videoUrl || "https://youtu.be/VIDEO_ID";
-  return isPost(cfg) ? `POST ${buildDropUrl(cfg, link)}\n\nbody: ${link}` : `GET ${buildDropUrl(cfg, link)}`;
+  return isPost(cfg) ? `POST ${buildDropUrl(cfg, link)}\nX-Token: ${cfg.token}\n\nbody: ${link}` : `GET ${buildDropUrl(cfg, link)}`;
 }
 
 // Sends the link (or TEST_URL) to the receiver using the configured method.
 function dropRequest(cfg, link) {
   const url = buildDropUrl(cfg, link);
   return isPost(cfg)
-    ? fetchOnce(url, { method: "POST", headers: { "Content-Type": "text/plain; charset=utf-8" }, body: link })
+    ? fetchOnce(url, { method: "POST", headers: { "Content-Type": "text/plain; charset=utf-8", "X-Token": cfg.token }, body: link })
     : fetchOnce(url);
 }
 

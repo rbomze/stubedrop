@@ -128,17 +128,27 @@ public class ServerService extends Service {
                 conn.close();
                 return;
             }
+            if (parts.length >= 1 && parts[0].equalsIgnoreCase("OPTIONS")) {
+                // CORS preflight from a browser extension sending the X-Token header: not a drop, not a failure
+                conn.write(("HTTP/1.1 204 No Content\r\nAccess-Control-Allow-Origin: *\r\nAccess-Control-Allow-Methods: GET, POST\r\n"
+                    + "Access-Control-Allow-Headers: X-Token, Content-Type\r\nAccess-Control-Max-Age: 600\r\nContent-Length: 0\r\nConnection: close\r\n\r\n").getBytes("UTF-8"));
+                conn.close();
+                return;
+            }
             if (parts.length >= 2) {
                 Uri u = Uri.parse("http://x" + parts[1]);
                 String url = u.getQueryParameter("url"), t = u.getQueryParameter("t");
                 if (parts[0].equalsIgnoreCase("POST")) {
                     // the link travels in the body, so it needs no URL-escaping: either the bare link
-                    // (text/plain) or a form body "url=...&t=..." (application/x-www-form-urlencoded)
+                    // (text/plain) or a form body "url=..." (application/x-www-form-urlencoded);
+                    // the password travels in the X-Token header, so it never appears in a URL
                     int len = 0; boolean form = false;
+                    t = null;
                     String h;
                     while ((h = conn.readLine()) != null && !h.isEmpty()) {
                         String lh = h.toLowerCase(Locale.ROOT);
-                        if (lh.startsWith("content-length:")) {
+                        if (lh.startsWith("x-token:")) t = h.substring(8).trim();
+                        else if (lh.startsWith("content-length:")) {
                             try { len = Integer.parseInt(h.substring(15).trim()); } catch (NumberFormatException ignored) {}
                         } else if (lh.startsWith("content-type:") && lh.contains("application/x-www-form-urlencoded")) form = true;
                     }
@@ -146,7 +156,6 @@ public class ServerService extends Service {
                     if (form) {
                         Uri f = Uri.parse("http://x/?" + body0);
                         if (f.getQueryParameter("url") != null) url = f.getQueryParameter("url");
-                        if (f.getQueryParameter("t") != null) t = f.getQueryParameter("t");
                     } else if (!body0.isEmpty()) url = body0;
                 }
                 boolean isTest = token.equals(t) && "testurl".equals(url);

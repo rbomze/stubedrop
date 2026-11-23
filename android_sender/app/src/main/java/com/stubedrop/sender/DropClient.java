@@ -44,14 +44,14 @@ public class DropClient {
     /** The URL that is requested. For POST the link is not part of it (it goes in the body). */
     public static String buildUrl(Config c, String link) {
         String base = (c.https ? "https" : "http") + "://" + (c.ip.isEmpty() ? "<tv-ip>" : c.ip) + ":" + c.port;
-        if (c.post) return base + "/?t=" + enc(c.token);
+        if (c.post) return base + "/";
         return base + "/?url=" + enc(link == null || link.isEmpty() ? "https://youtu.be/VIDEO_ID" : link) + "&t=" + enc(c.token);
     }
 
     /** Human-readable form of the whole request, for the "Effective URL" display. */
     public static String describe(Config c, String link) {
         String l = link == null || link.isEmpty() ? "https://youtu.be/VIDEO_ID" : link;
-        return c.post ? "POST " + buildUrl(c, l) + "\n\nbody: " + l : "GET " + buildUrl(c, l);
+        return c.post ? "POST " + buildUrl(c, l) + "\nX-Token: " + c.token + "\n\nbody: " + l : "GET " + buildUrl(c, l);
     }
 
     private static String enc(String s) {
@@ -136,6 +136,7 @@ public class DropClient {
                 h.setDoOutput(true);
                 h.setFixedLengthStreamingMode(payload.length);
                 h.setRequestProperty("Content-Type", "text/plain; charset=utf-8");
+                h.setRequestProperty("X-Token", c.token);
                 try (OutputStream o = h.getOutputStream()) { o.write(payload); }
             }
             int code = h.getResponseCode();
