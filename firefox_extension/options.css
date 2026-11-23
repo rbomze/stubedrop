@@ -18,3 +18,8 @@ code { display: block; padding: 8px; border-radius: 6px; background: #1e2342; wo
 #warn { margin: 12px 0 0; padding: 10px 12px; border-radius: 8px; background: #4a1c26; border: 1px solid #ff3b47; color: #ffd5d8; }
 button { padding: 8px 14px; margin-top: 14px; border: 0; border-radius: 8px; background: #ff3b47; color: #fff; font: 600 13px system-ui; cursor: pointer; }
 #testResult.ok { color: #6be08a; } #testResult.err { color: #ff8a92; }
+label.check { display: flex; gap: 8px; align-items: baseline; margin-top: 14px; }
+label.check input { display: inline; width: auto; margin: 0; }
+#certStatus { margin: 10px 0 6px; font-weight: 600; }
+#certStatus.ok { color: #6be08a; } #certStatus.err { color: #ffb86b; }
+#trustBox { margin-top: 4px; } #trustBox button { margin-top: 4px; margin-right: 8px; background: #343b6b; }

@@ -12,6 +12,11 @@ import java.util.regex.Pattern;
 
 public class ServerService extends Service {
     static final String DEFAULT_PKG = "app.smarttube.fdroid";
+    static final String TEST_PAGE = "<!doctype html><html><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">"
+        + "<title>S-Tube Drop</title><style>body{font:18px system-ui,sans-serif;background:#161a2e;color:#e8eaf5;display:flex;min-height:100vh;margin:0;align-items:center;justify-content:center;text-align:center}"
+        + "div{max-width:30em;padding:1.5em}h1{color:#6be08a;margin:0 0 .4em}p{margin:.4em 0;color:#9aa0c0}</style></head><body><div>"
+        + "<h1>\u2713 It works</h1><p>S-Tube Drop is reachable and accepted the password.</p>"
+        + "<p>You can close this tab now.</p></div></body></html>";
     static final Pattern YT = Pattern.compile("https://(www\\.|m\\.|music\\.)?(youtube\\.com|youtu\\.be)/.*");
 
     // rate limiting: 3 failures within 60 s -> silently ignore that IP for 240 s
@@ -95,23 +100,38 @@ public class ServerService extends Service {
             int first = bin.read();
             if (first < 0) return;
             bin.reset();
-            if (first < 0x20 || first > 0x7E) {
-                // binary data, typically a TLS handshake: a client is using https:// on this plain-HTTP port.
-                // Ignore it silently and do NOT count it as a failed login.
-                DropLog.add(ip + "  ⚠ ignored non-HTTP data (https:// used on the plain-http port?)");
+            Conn conn;
+            if (first == 0x16) { // TLS ClientHello: serve https on the same port
+                try {
+                    Conn.Tls t = new Conn.Tls(TlsSupport.context(), bin, sock.getOutputStream());
+                    t.handshake();
+                    conn = t;
+                } catch (Exception e) {
+                    // typically the browser rejected the self-signed certificate; not a failed login
+                    DropLog.add(ip + "  ⚠ TLS handshake failed (certificate not accepted yet?)");
+                    return;
+                }
+            } else if (first < 0x20 || first > 0x7E) {
+                DropLog.add(ip + "  ⚠ ignored non-HTTP data");
                 return;
+            } else {
+                conn = new Conn.Plain(bin, sock.getOutputStream());
             }
-            BufferedReader r = new BufferedReader(new InputStreamReader(bin));
-            String line = r.readLine(); // GET /?url=...&t=... HTTP/1.1
-            if (line == null) return;
-            int code = 403; String body = "";
+            String line = conn.readLine(); // GET /?url=...&t=... HTTP/1.1
+            if (line == null) { conn.close(); return; }
+            int code = 403; String body = "", ctype = "text/plain";
             String reason = "malformed request: [" + line.replaceAll("[^\\x20-\\x7E]", "?").substring(0, Math.min(line.length(), 80)) + "]";
             String[] parts = line.split(" ");
             if (parts.length >= 2) {
                 Uri u = Uri.parse("http://x" + parts[1]);
                 String url = u.getQueryParameter("url"), t = u.getQueryParameter("t");
-                reason = !token.equals(t) ? "bad password" : (url == null || !YT.matcher(url).matches()) ? "not a YouTube link: " + url : "";
-                if (reason.isEmpty()) {
+                boolean isTest = token.equals(t) && "testurl".equals(url);
+                reason = isTest ? "" : !token.equals(t) ? "bad password" : (url == null || !YT.matcher(url).matches()) ? "not a YouTube link: " + url : "";
+                if (isTest) {
+                    // connection/password/certificate check: never starts a video
+                    code = 200; ctype = "text/html; charset=utf-8"; body = TEST_PAGE;
+                    DropLog.add(ip + "  ✓ connection test");
+                } else if (reason.isEmpty()) {
                     String pkg = prefs.getString("pkg", DEFAULT_PKG);
                     Intent in = new Intent(Intent.ACTION_VIEW, Uri.parse(url))
                         .setPackage(pkg).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
@@ -128,15 +148,18 @@ public class ServerService extends Service {
             }
             if (code == 403) {
                 body = reason.startsWith("bad password") ? "bad password" : "bad url";
-                boolean blocked = recordFailure(ip);
+                // a correct password with a bad link (e.g. the browser extension's connection test)
+                // is not a guessing attempt, so it does not count towards the block
+                boolean blocked = !reason.startsWith("not a YouTube link") && recordFailure(ip);
                 DropLog.add(ip + "  ✗ rejected (" + reason + ")" + (blocked ? " – blocked for 4 min" : ""));
                 toast("S-Tube Drop: rejected request from " + ip);
             }
             String status = code == 200 ? "OK" : code == 403 ? "Forbidden" : "Error";
-            OutputStream o = sock.getOutputStream();
-            o.write(("HTTP/1.1 " + code + " " + status + "\r\nAccess-Control-Allow-Origin: *\r\nContent-Length: " + body.length()
-                + "\r\nConnection: close\r\n\r\n" + body).getBytes());
-            o.flush();
+            byte[] payload = body.getBytes("UTF-8");
+            conn.write(("HTTP/1.1 " + code + " " + status + "\r\nAccess-Control-Allow-Origin: *\r\nContent-Type: " + ctype
+                + "\r\nContent-Length: " + payload.length + "\r\nConnection: close\r\n\r\n").getBytes("UTF-8"));
+            if (payload.length > 0) conn.write(payload);
+            conn.close();
         } catch (IOException ignored) {}
     }
 

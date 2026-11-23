@@ -48,6 +48,7 @@ async function handleSend(url) {
       await browser.storage.local.remove("warning");
       return flash("✓", "#2a9d4b", r.msg);
     case "config": // not configured yet
+    case "trust":  // certificate not accepted yet
     case "auth":   // wrong password
       return showPreferences(r.msg);
     default:       // TV unreachable etc.

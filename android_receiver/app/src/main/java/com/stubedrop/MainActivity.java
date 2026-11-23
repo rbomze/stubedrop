@@ -16,7 +16,7 @@ import java.util.*;
 public class MainActivity extends Activity {
     private SharedPreferences p;
     private EditText port, token;
-    private TextView status, urlView, logView, howView;
+    private TextView status, urlView, httpsView, certView, logView, howView;
     private EditText pkg;
 
     @Override protected void onCreate(Bundle b) {
@@ -25,6 +25,7 @@ public class MainActivity extends Activity {
             requestPermissions(new String[]{"android.permission.POST_NOTIFICATIONS"}, 0);
         p = getSharedPreferences("cfg", MODE_PRIVATE);
         p.edit().remove("log").apply(); // purge any log stored by older versions
+        try { TlsSupport.ensureKey(); } catch (Exception ignored) {} // generate the certificate on first launch
 
         LinearLayout l = new LinearLayout(this);
         l.setOrientation(LinearLayout.VERTICAL);
@@ -69,14 +70,22 @@ public class MainActivity extends Activity {
         l.addView(status);
 
         // url
-        l.addView(heading("Your drop URL"));
-        l.addView(text("Call this address (GET or POST) from any device on the same network. Replace the YouTube link with the video you want to play; URL-encode it if it contains & or ?.", 14, false));
+        l.addView(heading("Your drop URLs"));
+        l.addView(text("Call one of these (GET or POST) from any device on the same network. Replace the YouTube link with the video you want to play; URL-encode it if it contains & or ?. Both work on the same port. Use url=testurl to check the connection and password without starting a video.", 14, false));
+        l.addView(text("Plain HTTP", 14, true));
         urlView = text("", 15, false);
         urlView.setTypeface(Typeface.MONOSPACE);
-        urlView.setPadding(0, dp(8), 0, dp(8));
+        urlView.setPadding(0, dp(4), 0, dp(4));
         l.addView(urlView);
-        Button copy = button("Copy URL");
-        l.addView(copy);
+        l.addView(text("HTTPS (encrypted, self-signed certificate)", 14, true));
+        httpsView = text("", 15, false);
+        httpsView.setTypeface(Typeface.MONOSPACE);
+        httpsView.setPadding(0, dp(4), 0, dp(4));
+        l.addView(httpsView);
+        certView = text("", 12, false);
+        certView.setTypeface(Typeface.MONOSPACE);
+        l.addView(certView);
+        l.addView(text("The certificate was generated on this TV when the app first ran; its private key never leaves the device. Browsers and apps will warn that it is not trusted: accept it once, or compare the fingerprint above with the one shown in the warning. With curl use -k.", 12, false));
 
         // usage
         l.addView(heading("How to use"));
@@ -129,10 +138,6 @@ public class MainActivity extends Activity {
             stopService(new Intent(this, ServerService.class));
             refresh();
         });
-        copy.setOnClickListener(v -> {
-            ((ClipboardManager) getSystemService(CLIPBOARD_SERVICE)).setPrimaryClip(ClipData.newPlainText("drop url", dropUrl()));
-            Toast.makeText(this, "Copied", Toast.LENGTH_SHORT).show();
-        });
         overlay.setOnClickListener(v -> {
             try { startActivity(new Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:" + getPackageName()))); }
             catch (Exception e) { status.setText("Enable 'Display over other apps' for S-Tube Drop in system settings"); }
@@ -161,7 +166,9 @@ public class MainActivity extends Activity {
     private void refresh() {
         boolean on = p.getBoolean("enabled", true);
         status.setText(on ? "● Running on port " + p.getInt("port", 8765) : "○ Stopped");
-        urlView.setText(dropUrl());
+        urlView.setText(dropUrl("http"));
+        httpsView.setText(dropUrl("https"));
+        certView.setText("Certificate fingerprint (SHA-256):\n" + TlsSupport.fingerprint());
         howView.setText(
             "Set up HTTP Shortcuts (free, open source) on your phone once:\n\n"
           + "1. Variables → add a variable of type Text, name it  link . Enable the option that lets the Share dialog set its value, and disable 'remember value'.\n\n"
@@ -175,8 +182,8 @@ public class MainActivity extends Activity {
           + "Notes: only youtube.com, youtu.be and music.youtube.com links are accepted. Give the TV a fixed IP in your router, or the shortcut stops working when the address changes. The phone must be on the same network.");
     }
 
-    private String dropUrl() {
-        return "http://" + localIp() + ":" + p.getInt("port", 8765)
+    private String dropUrl(String scheme) {
+        return scheme + "://" + localIp() + ":" + p.getInt("port", 8765)
             + "/?url=https://youtu.be/VIDEO_ID&t=" + p.getString("token", "changeme");
     }
 

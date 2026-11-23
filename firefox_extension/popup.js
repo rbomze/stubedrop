@@ -14,6 +14,7 @@ async function run(url) {
       setTimeout(() => window.close(), 1500);
       break;
     case "config": // not configured yet
+    case "trust":  // certificate not accepted yet
     case "auth":   // wrong password
       await browser.storage.local.set({ warning: r.msg });
       browser.runtime.openOptionsPage();
