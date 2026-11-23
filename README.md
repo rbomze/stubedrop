@@ -131,8 +131,8 @@ keyPassword=…
 Point each app at the Android SDK with `local.properties` (`sdk.dir=/path/to/Android/sdk`), then build:
 
 ```sh
-cd android_receiver && gradle assembleRelease    # app/build/outputs/apk/release/app-release.apk
-cd ../android_sender && gradle assembleRelease
+cd android_receiver && gradle assembleRelease    # app/build/outputs/apk/release/stube_receiver.apk
+cd ../android_sender && gradle assembleRelease      # ... /release/stube_sender.apk
 ```
 
 Keep the keystore safe: an app can only be updated in place if it is signed with the same key.
@@ -141,7 +141,7 @@ Keep the keystore safe: an app can only be updated in place if it is signed with
 
 ```sh
 adb connect TV-IP:PORT          # wireless debugging; the port changes, check the TV's developer options
-adb install -r android_receiver/app/build/outputs/apk/release/app-release.apk
+adb install -r android_receiver/app/build/outputs/apk/release/stube_receiver.apk
 ```
 
 ## Installing the extension
