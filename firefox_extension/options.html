@@ -1,0 +1,20 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><link rel="stylesheet" href="options.css"></head>
+<body>
+  <header><img src="icons/icon.svg" alt=""><h1>S-Tube Drop</h1></header>
+  <p id="warn" hidden></p>
+  <p class="hint">Open a video on YouTube and click the droplet icon in the address bar to play it in SmartTube on your TV. You can also right-click a video link and choose “Send to TV”.</p>
+
+  <h2>Target</h2>
+  <label>TV IP address <span class="dim">(shown in the S-Tube Drop app on the TV)</span><input id="ip" placeholder="e.g. 192.168.1.50" autocomplete="off"></label>
+  <label>Port <span class="dim">(default 8765)</span><input id="port" type="number" min="1" max="65535"></label>
+  <label>Password / token <span class="dim">(default changeme)</span><input id="token" autocomplete="off"></label>
+
+  <button id="test">Test connection</button> <span id="testResult"></span>
+
+  <h2>Effective URL</h2>
+  <code id="url"></code>
+  <script src="common.js"></script>
+  <script src="options.js"></script>
+  <p class="dim" id="ver"></p>
+</body></html>

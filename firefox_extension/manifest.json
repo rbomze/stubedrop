@@ -1,0 +1,40 @@
+{
+  "manifest_version": 3,
+  "name": "S-Tube Drop",
+  "version": "1.4",
+  "description": "Send the current YouTube video to SmartTube on your Android TV via the S-Tube Drop receiver app.",
+  "icons": {
+    "48": "icons/icon.svg",
+    "96": "icons/icon.svg"
+  },
+  "permissions": [
+    "tabs",
+    "storage",
+    "contextMenus",
+    "notifications"
+  ],
+  "background": {
+    "scripts": [
+      "common.js",
+      "background.js"
+    ]
+  },
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "stubedrop@local",
+      "strict_min_version": "115.0"
+    }
+  },
+  "options_ui": {
+    "page": "options.html",
+    "open_in_tab": false
+  },
+  "action": {
+    "default_title": "Send this video to the TV (S-Tube Drop)",
+    "default_icon": "icons/icon.svg",
+    "default_area": "navbar"
+  },
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'self'"
+  }
+}

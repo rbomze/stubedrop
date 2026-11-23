@@ -1,0 +1,30 @@
+plugins { id 'com.android.application' }
+def ks = new Properties()
+file('../keystore.properties').withInputStream { ks.load(it) }
+android {
+    namespace 'com.stubedrop'
+    compileSdk 35
+    defaultConfig {
+        applicationId 'com.stubedrop'
+        minSdk 21
+        targetSdk 34
+        versionCode 1
+        versionName '1.0'
+    }
+    signingConfigs {
+        release {
+            storeFile file('../' + ks['storeFile'])
+            storePassword ks['storePassword']
+            keyAlias ks['keyAlias']
+            keyPassword ks['keyPassword']
+        }
+    }
+    buildTypes {
+        release {
+            minifyEnabled true
+            shrinkResources false
+            signingConfig signingConfigs.release
+        }
+    }
+    compileOptions { sourceCompatibility JavaVersion.VERSION_17; targetCompatibility JavaVersion.VERSION_17 }
+}
