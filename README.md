@@ -3,14 +3,14 @@
 Send a YouTube video from your phone or browser to [SmartTube](https://github.com/yuliskov/SmartTube) on your Android TV, with one tap.
 
 ```
- ┌────────────────────┐
+ ┌───────────────────-─┐
  │ Phone: share a link │──┐
- │  S-Tube Drop Sender │  │      HTTP(S) POST/GET        ┌──────────────────────────┐
- └────────────────────┘  ├────────────────────────────▶ │ TV: S-Tube Drop receiver │──▶ SmartTube plays it
- ┌────────────────────┐  │      on your local network   └──────────────────────────┘
+ │  S-Tube Drop Sender │  │  HTTP(S) POST/GET        ┌──────────────────────────┐
+ └──────────────────-──┘  ├────────────────────────▶ │ TV: S-Tube Drop receiver │──▶ SmartTube 
+ ┌──────────────────-──┐  │  on your local network   └──────────────────────────┘    plays it
  │ Firefox / LibreWolf │──┘
  │  toolbar button     │
- └────────────────────┘
+ └───────────────────-─┘
 ```
 
 Everything stays on your own network. There is no cloud service and no account.
