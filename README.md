@@ -21,7 +21,7 @@ Everything stays on your own network. There is no cloud service and no account.
 |---|---|---|
 | [`android_receiver/`](android_receiver) | **S-Tube Drop**: runs on the TV, listens for links and opens them in SmartTube | 0.10 |
 | [`android_sender/`](android_sender) | **S-Tube Drop Sender**: Android phone app; share a YouTube link to it and it goes to the TV | 0.10 |
-| [`firefox_extension/`](firefox_extension) | Firefox / LibreWolf extension: a toolbar button that sends the current video | 0.12 |
+| [`firefox_extension/`](firefox_extension) | Firefox / LibreWolf extension: a toolbar button that sends the current video | 0.13 |
 
 You need the receiver plus at least one sender. Any other client works too (see [Protocol](#protocol)), for example the [HTTP Shortcuts](https://http-shortcuts.rmy.ch/) app or `curl`.
 

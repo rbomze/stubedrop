@@ -1,11 +1,13 @@
 {
   "manifest_version": 3,
   "name": "S-Tube Drop",
-  "version": "0.12",
+  "version": "0.13",
   "description": "Send the current YouTube video to SmartTube on your Android TV via the S-Tube Drop receiver app.",
   "icons": {
-    "48": "icons/icon.svg",
-    "96": "icons/icon.svg"
+    "48": "icons/icon-48.png",
+    "64": "icons/icon-64.png",
+    "96": "icons/icon-96.png",
+    "128": "icons/icon-128.png"
   },
   "permissions": [
     "tabs",
