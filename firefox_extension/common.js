@@ -1,7 +1,7 @@
 // Shared by background script and popup.
 // https: use TLS (self-signed certificate on the TV). certTrusted: the "ip:port" for which a
 // request over https has succeeded, i.e. the user has accepted the certificate in the browser.
-const DEFAULTS = { ip: "", port: 8765, token: "changeme", https: true, certTrusted: "" };
+const DEFAULTS = { ip: "", port: 8765, token: "changeme", https: true, certTrusted: "", method: "POST" };
 
 const loadCfg = () => browser.storage.local.get(DEFAULTS);
 
@@ -34,9 +34,28 @@ const needsTrust = (cfg) => cfg.https && cfg.certTrusted !== trustKey(cfg);
 
 const TRUST_MSG = "Trust the TV's certificate first: click “Trust certificate”, accept the browser warning, then come back and press “Test connection”.";
 
+// POST sends the link as the request body (no URL-escaping needed); GET puts it in the query.
+const isPost = (cfg) => cfg.method !== "GET";
+
+// The URL that is requested; for POST the link is not part of it.
 function buildDropUrl(cfg, videoUrl) {
-  const q = new URLSearchParams({ url: videoUrl || "https://youtu.be/VIDEO_ID", t: cfg.token });
-  return `${scheme(cfg)}://${cfg.ip || "<tv-ip>"}:${cfg.port}/?${q}`;
+  const base = `${scheme(cfg)}://${cfg.ip || "<tv-ip>"}:${cfg.port}/`;
+  if (isPost(cfg)) return base + "?" + new URLSearchParams({ t: cfg.token });
+  return base + "?" + new URLSearchParams({ url: videoUrl || "https://youtu.be/VIDEO_ID", t: cfg.token });
+}
+
+// The whole request as text, for display.
+function describeRequest(cfg, videoUrl) {
+  const link = videoUrl || "https://youtu.be/VIDEO_ID";
+  return isPost(cfg) ? `POST ${buildDropUrl(cfg, link)}\n\nbody: ${link}` : `GET ${buildDropUrl(cfg, link)}`;
+}
+
+// Sends the link (or TEST_URL) to the receiver using the configured method.
+function dropRequest(cfg, link) {
+  const url = buildDropUrl(cfg, link);
+  return isPost(cfg)
+    ? fetchOnce(url, { method: "POST", headers: { "Content-Type": "text/plain; charset=utf-8" }, body: link })
+    : fetchOnce(url);
 }
 
 // "testurl" is a placeholder the receiver answers with a "it works" page (when the password
@@ -44,11 +63,11 @@ function buildDropUrl(cfg, videoUrl) {
 const TEST_URL = "testurl";
 const trustUrl = (cfg) => `${scheme(cfg)}://${cfg.ip}:${cfg.port}/?` + new URLSearchParams({ url: TEST_URL, t: cfg.token });
 
-// Single GET with a timeout.
-async function fetchOnce(url) {
+// Single request with a timeout.
+async function fetchOnce(url, opts = {}) {
   const ctl = new AbortController();
   const timer = setTimeout(() => ctl.abort(), 6000);
-  try { return await fetch(url, { signal: ctl.signal }); }
+  try { return await fetch(url, { ...opts, signal: ctl.signal }); }
   finally { clearTimeout(timer); }
 }
 
@@ -58,7 +77,7 @@ async function sendDrop(cfg, videoUrl) {
   if (!validPort(cfg.port)) return { ok: false, kind: "config", msg: "The port is invalid (1–65535)." };
   if (needsTrust(cfg)) return { ok: false, kind: "trust", msg: TRUST_MSG };
   try {
-    const r = await fetchOnce(buildDropUrl(cfg, toHttps(videoUrl)));
+    const r = await dropRequest(cfg, toHttps(videoUrl));
     if (r.ok) return { ok: true, kind: "ok", msg: "Sent to TV ▶" };
     if (r.status === 403 && (await r.text()) === "bad url") return { ok: false, kind: "other", msg: "The TV did not accept this link as a YouTube video link." };
     if (r.status === 403) return { ok: false, kind: "auth", msg: "The TV rejected the password. Make sure it matches the one in the S-Tube Drop app. Repeated failures get this computer blocked for 4 minutes." };
@@ -75,7 +94,7 @@ async function testConnection(cfg) {
   if (!validHost(cfg.ip)) return { ok: false, msg: "Enter the TV's IP address first." };
   if (!validPort(cfg.port)) return { ok: false, msg: "The port is invalid (1–65535)." };
   try {
-    const r = await fetchOnce(trustUrl(cfg));
+    const r = await dropRequest(cfg, TEST_URL);
     const body = await r.text();
     if (cfg.https) await browser.storage.local.set({ certTrusted: trustKey(cfg) }); // TLS worked
     if (r.ok) return { ok: true, msg: "✓ Connected – the TV is reachable and accepted the password." + (cfg.https ? " Certificate trusted." : "") };

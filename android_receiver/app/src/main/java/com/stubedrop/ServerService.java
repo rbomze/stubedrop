@@ -122,9 +122,33 @@ public class ServerService extends Service {
             int code = 403; String body = "", ctype = "text/plain";
             String reason = "malformed request: [" + line.replaceAll("[^\\x20-\\x7E]", "?").substring(0, Math.min(line.length(), 80)) + "]";
             String[] parts = line.split(" ");
+            if (parts.length >= 2 && parts[1].startsWith("/favicon")) {
+                // browsers fetch this on their own after opening a page: not a drop, not a failure
+                conn.write("HTTP/1.1 404 Not Found\r\nContent-Length: 0\r\nConnection: close\r\n\r\n".getBytes("UTF-8"));
+                conn.close();
+                return;
+            }
             if (parts.length >= 2) {
                 Uri u = Uri.parse("http://x" + parts[1]);
                 String url = u.getQueryParameter("url"), t = u.getQueryParameter("t");
+                if (parts[0].equalsIgnoreCase("POST")) {
+                    // the link travels in the body, so it needs no URL-escaping: either the bare link
+                    // (text/plain) or a form body "url=...&t=..." (application/x-www-form-urlencoded)
+                    int len = 0; boolean form = false;
+                    String h;
+                    while ((h = conn.readLine()) != null && !h.isEmpty()) {
+                        String lh = h.toLowerCase(Locale.ROOT);
+                        if (lh.startsWith("content-length:")) {
+                            try { len = Integer.parseInt(h.substring(15).trim()); } catch (NumberFormatException ignored) {}
+                        } else if (lh.startsWith("content-type:") && lh.contains("application/x-www-form-urlencoded")) form = true;
+                    }
+                    String body0 = new String(conn.readBody(Math.max(0, Math.min(len, 4096))).getBytes("ISO-8859-1"), "UTF-8").trim();
+                    if (form) {
+                        Uri f = Uri.parse("http://x/?" + body0);
+                        if (f.getQueryParameter("url") != null) url = f.getQueryParameter("url");
+                        if (f.getQueryParameter("t") != null) t = f.getQueryParameter("t");
+                    } else if (!body0.isEmpty()) url = body0;
+                }
                 boolean isTest = token.equals(t) && "testurl".equals(url);
                 reason = isTest ? "" : !token.equals(t) ? "bad password" : (url == null || !YT.matcher(url).matches()) ? "not a YouTube link: " + url : "";
                 if (isTest) {

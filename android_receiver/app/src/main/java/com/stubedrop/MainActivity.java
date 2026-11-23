@@ -71,7 +71,7 @@ public class MainActivity extends Activity {
 
         // url
         l.addView(heading("Your drop URLs"));
-        l.addView(text("Call one of these (GET or POST) from any device on the same network. Replace the YouTube link with the video you want to play; URL-encode it if it contains & or ?. Both work on the same port. Use url=testurl to check the connection and password without starting a video.", 14, false));
+        l.addView(text("Call one of these from any device on the same network. GET: put url and t in the query string and URL-encode the link if it contains &. POST: send the link as the request body (no escaping needed) and the password as ?t=… in the URL, e.g. POST /?t=PASSWORD with body https://youtu.be/VIDEO_ID. Both work on the same port. Use testurl instead of a link to check the connection and password without starting a video.", 14, false));
         l.addView(text("Plain HTTP", 14, true));
         urlView = text("", 15, false);
         urlView.setTypeface(Typeface.MONOSPACE);
@@ -172,7 +172,12 @@ public class MainActivity extends Activity {
         howView.setText(
             "Set up HTTP Shortcuts (free, open source) on your phone once:\n\n"
           + "1. Variables → add a variable of type Text, name it  link . Enable the option that lets the Share dialog set its value, and disable 'remember value'.\n\n"
-          + "2. Create a shortcut:\n"
+          + "2. Create a shortcut, either with GET or (recommended) POST:\n\n"
+          + "   POST: the link goes in the request body, so it needs no URL-escaping.\n"
+          + "   • Method: POST\n"
+          + "   • URL: http://" + localIp() + ":" + p.getInt("port", 8765) + "/?t=" + p.getString("token", "changeme") + "\n"
+          + "   • Request body: Custom text, content type text/plain, containing just  {link}  (the variable). A form body  url={link}&t=…  with content type application/x-www-form-urlencoded also works, but then the link must be escaped.\n\n"
+          + "   GET: everything in the query string, so the link must be URL-escaped.\n"
           + "   • Method: GET\n"
           + "   • URL: http://" + localIp() + ":" + p.getInt("port", 8765) + "/\n"
           + "   • Request parameters:\n"

@@ -24,6 +24,7 @@ public class MainActivity extends Activity {
     private final Handler ui = new Handler(Looper.getMainLooper());
     private EditText ip, port, token;
     private CheckBox https;
+    private Spinner method;
     private TextView warn, certStatus, urlView, result;
     private Button trust;
     private DropClient.Config cfg;
@@ -66,6 +67,12 @@ public class MainActivity extends Activity {
         addField(l, "Port", "The port the receiver app listens on (default 8765). Must match the receiver app.", port);
         addField(l, "Password / token", "The shared secret (default “changeme”). Must match the receiver app. Change it from the default.", token);
 
+        addLabel(l, "Request method", "POST sends the link in the request body, so it needs no URL-escaping (recommended). GET puts it in the URL.");
+        method = new Spinner(this);
+        method.setAdapter(new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, new String[]{"POST", "GET"}));
+        method.setSelection(cfg.post ? 0 : 1);
+        l.addView(method);
+
         https = new CheckBox(this);
         https.setText("Use HTTPS (recommended: encrypts the password)");
         https.setChecked(cfg.https);
@@ -100,6 +107,10 @@ public class MainActivity extends Activity {
         TextWatcher watch = new SimpleWatcher(this::onEdit);
         ip.addTextChangedListener(watch); port.addTextChangedListener(watch); token.addTextChangedListener(watch);
         https.setOnCheckedChangeListener((v, on) -> onEdit());
+        method.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            public void onItemSelected(AdapterView<?> a, View v, int pos, long id) { onEdit(); }
+            public void onNothingSelected(AdapterView<?> a) {}
+        });
         trust.setOnClickListener(v -> trustCertificate());
         test.setOnClickListener(v -> run(DropClient.TEST_URL));
         clip.setOnClickListener(v -> sendClipboard());
@@ -124,7 +135,8 @@ public class MainActivity extends Activity {
         try { cfg.port = Integer.parseInt(port.getText().toString().trim()); } catch (Exception e) { cfg.port = 0; }
         cfg.token = token.getText().toString().trim();
         cfg.https = https.isChecked();
-        p.edit().putString("ip", cfg.ip).putInt("port", cfg.port).putString("token", cfg.token).putBoolean("https", cfg.https).apply();
+        cfg.post = method.getSelectedItemPosition() == 0;
+        p.edit().putString("ip", cfg.ip).putInt("port", cfg.port).putString("token", cfg.token).putBoolean("https", cfg.https).putBoolean("post", cfg.post).apply();
         result.setText("");
         showWarning(cfg.https && DropClient.validHost(cfg.ip) && DropClient.needsTrust(cfg)
             ? "The TV's certificate isn't trusted yet. Tap “Trust certificate…” to continue." : "");
@@ -135,7 +147,7 @@ public class MainActivity extends Activity {
         box(ip, !cfg.ip.isEmpty() && !DropClient.validHost(cfg.ip));
         box(port, !DropClient.validPort(cfg.port));
         box(token, false);
-        urlView.setText(DropClient.buildUrl(cfg, ""));
+        urlView.setText(DropClient.describe(cfg, ""));
         boolean show = cfg.https;
         certStatus.setVisibility(show ? View.VISIBLE : View.GONE);
         trust.setVisibility(show ? View.VISIBLE : View.GONE);
@@ -248,12 +260,16 @@ public class MainActivity extends Activity {
         return e;
     }
 
-    /** Label + short description above a field. */
-    private void addField(LinearLayout l, String label, String description, EditText field) {
+    private void addLabel(LinearLayout l, String label, String description) {
         TextView t = text(label, 15, true);
         t.setPadding(0, dp(14), 0, 0);
         l.addView(t);
         l.addView(text(description, 12, false));
+    }
+
+    /** Label + short description above a field. */
+    private void addField(LinearLayout l, String label, String description, EditText field) {
+        addLabel(l, label, description);
         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-1, -2);
         lp.topMargin = dp(4);
         l.addView(field, lp);

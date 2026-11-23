@@ -14,6 +14,7 @@ class Store {
         cfg.port = p.getInt("port", 8765);
         cfg.token = p.getString("token", "changeme");
         cfg.https = p.getBoolean("https", true);
+        cfg.post = p.getBoolean("post", true);
         cfg.pinKey = p.getString("pinKey", "");
         cfg.pinFp = p.getString("pinFp", "");
         return cfg;

@@ -7,15 +7,41 @@ import java.nio.ByteBuffer;
 /** Minimal "read the request line / write the response" connection, plain or TLS. */
 interface Conn {
     String readLine() throws IOException;
+    /** Reads exactly n body bytes (as ISO-8859-1 chars, i.e. one char per byte). */
+    String readBody(int n) throws IOException;
     void write(byte[] b) throws IOException;
     void close();
 
     class Plain implements Conn {
-        private final BufferedReader r; private final OutputStream o;
-        Plain(InputStream in, OutputStream o) { r = new BufferedReader(new InputStreamReader(in)); this.o = o; }
-        public String readLine() throws IOException { return r.readLine(); }
+        private final InputStream in; private final OutputStream o;
+        Plain(InputStream in, OutputStream o) { this.in = in; this.o = o; }
+        public String readLine() throws IOException { return Conn.line(this::readByte); }
+        public String readBody(int n) throws IOException { return Conn.body(this::readByte, n); }
+        private int readByte() throws IOException { return in.read(); }
         public void write(byte[] b) throws IOException { o.write(b); o.flush(); }
         public void close() {}
+    }
+
+    interface Bytes { int next() throws IOException; }
+
+    static String line(Bytes src) throws IOException {
+        StringBuilder sb = new StringBuilder();
+        int c;
+        while (sb.length() < 8192 && (c = src.next()) >= 0) {
+            if (c == '\n') return sb.toString().replace("\r", "");
+            sb.append((char) c);
+        }
+        return sb.length() == 0 ? null : sb.toString().replace("\r", "");
+    }
+
+    static String body(Bytes src, int n) throws IOException {
+        StringBuilder sb = new StringBuilder();
+        while (sb.length() < n) {
+            int c = src.next();
+            if (c < 0) break;
+            sb.append((char) c);
+        }
+        return sb.toString();
     }
 
     /**
@@ -81,20 +107,19 @@ interface Conn {
             return r;
         }
 
-        public String readLine() throws IOException {
-            StringBuilder sb = new StringBuilder();
-            while (sb.length() < 8192) {
-                appIn.flip();
-                while (appIn.hasRemaining()) {
-                    int c = appIn.get() & 0xff;
-                    if (c == '\n') { appIn.clear(); return sb.toString().replace("\r", ""); }
-                    sb.append((char) c);
-                }
-                appIn.clear();
-                if (unwrap().getStatus() == SSLEngineResult.Status.CLOSED) return sb.length() == 0 ? null : sb.toString();
+        private boolean reading; // appIn holds decrypted bytes not yet consumed
+
+        private int readByte() throws IOException {
+            while (true) {
+                if (reading && appIn.hasRemaining()) return appIn.get() & 0xff;
+                appIn.clear(); reading = false;
+                if (unwrap().getStatus() == SSLEngineResult.Status.CLOSED) return -1;
+                appIn.flip(); reading = true;
             }
-            return sb.toString();
         }
+
+        public String readLine() throws IOException { return Conn.line(this::readByte); }
+        public String readBody(int n) throws IOException { return Conn.body(this::readByte, n); }
 
         public void write(byte[] b) throws IOException {
             ByteBuffer src = ByteBuffer.wrap(b);

@@ -23,3 +23,5 @@ label.check input { display: inline; width: auto; margin: 0; }
 #certStatus { margin: 10px 0 6px; font-weight: 600; }
 #certStatus.ok { color: #6be08a; } #certStatus.err { color: #ffb86b; }
 #trustBox { margin-top: 4px; } #trustBox button { margin-top: 4px; margin-right: 8px; background: #343b6b; }
+select { display: block; width: 100%; box-sizing: border-box; margin-top: 3px; padding: 6px 8px; border: 1px solid #343b6b; border-radius: 6px; background: #1e2342; color: inherit; font: inherit; }
+code { white-space: pre-wrap; }

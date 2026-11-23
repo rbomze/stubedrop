@@ -20,6 +20,7 @@ public class DropClient {
     public static class Config {
         public String ip = ""; public int port = 8765; public String token = "changeme";
         public boolean https = true;
+        public boolean post = true;              // POST (link in the body, no escaping) or GET (everything in the query)
         public String pinKey = "", pinFp = "";   // the ip:port and fingerprint the user trusted
     }
 
@@ -40,9 +41,17 @@ public class DropClient {
         return c.https && !(trustKey(c).equals(c.pinKey) && c.pinFp != null && !c.pinFp.isEmpty());
     }
 
+    /** The URL that is requested. For POST the link is not part of it (it goes in the body). */
     public static String buildUrl(Config c, String link) {
-        return (c.https ? "https" : "http") + "://" + (c.ip.isEmpty() ? "<tv-ip>" : c.ip) + ":" + c.port
-            + "/?url=" + enc(link == null || link.isEmpty() ? "https://youtu.be/VIDEO_ID" : link) + "&t=" + enc(c.token);
+        String base = (c.https ? "https" : "http") + "://" + (c.ip.isEmpty() ? "<tv-ip>" : c.ip) + ":" + c.port;
+        if (c.post) return base + "/?t=" + enc(c.token);
+        return base + "/?url=" + enc(link == null || link.isEmpty() ? "https://youtu.be/VIDEO_ID" : link) + "&t=" + enc(c.token);
+    }
+
+    /** Human-readable form of the whole request, for the "Effective URL" display. */
+    public static String describe(Config c, String link) {
+        String l = link == null || link.isEmpty() ? "https://youtu.be/VIDEO_ID" : link;
+        return c.post ? "POST " + buildUrl(c, l) + "\n\nbody: " + l : "GET " + buildUrl(c, l);
     }
 
     private static String enc(String s) {
@@ -121,6 +130,14 @@ public class DropClient {
             }
             h.setConnectTimeout(5000);
             h.setReadTimeout(6000);
+            if (c.post) {
+                byte[] payload = link.getBytes(StandardCharsets.UTF_8);
+                h.setRequestMethod("POST");
+                h.setDoOutput(true);
+                h.setFixedLengthStreamingMode(payload.length);
+                h.setRequestProperty("Content-Type", "text/plain; charset=utf-8");
+                try (OutputStream o = h.getOutputStream()) { o.write(payload); }
+            }
             int code = h.getResponseCode();
             String body = read(code >= 400 ? h.getErrorStream() : h.getInputStream());
             h.disconnect();
