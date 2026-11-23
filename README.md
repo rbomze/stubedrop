@@ -37,11 +37,36 @@ You need the receiver plus at least one sender. Any other client works too (see 
 - **Sender app:** a share target for YouTube links, configurable like the extension, with certificate pinning (you confirm the TV's SHA-256 fingerprint once).
 - **Extension:** the toolbar button is only active on pages with a playable video; there is also a right-click entry on YouTube links. Results are shown in the popup, with no OS notifications. It asks only for `tabs`, `storage` and `contextMenus`.
 
+## Installation
+
+### From the release (easiest)
+
+Download the files from the [latest release](https://github.com/rbomze/stubedrop/releases/latest):
+
+| File | Install on |
+|---|---|
+| `stube_receiver.apk` | the TV |
+| `stube_sender.apk` | your phone |
+
+- **Phone:** download `stube_sender.apk` on the phone and open it. Android asks once to allow installing apps from this source (your browser or file manager); allow it.
+- **TV:** Android TV has no easy way to open a downloaded file, so pick one of these:
+  - `adb install -r stube_receiver.apk` from your computer (see [Installing over adb](#installing-over-adb)).
+  - Copy the file to a USB stick and open it with a file manager app on the TV.
+  - Use a sideloading app on the TV, such as *Downloader*.
+- **Firefox / LibreWolf:** install the extension from Mozilla: <https://addons.mozilla.org/en-US/firefox/addon/s-tube-drop/>.
+- **Optional check:** compare the file's SHA-256 (`shasum -a 256 stube_receiver.apk`) with the checksums in the release notes.
+
+The APKs are signed with a personal key and are not on Google Play. A build you make yourself is signed with your own key, so it cannot be installed over a release build (or the other way round) without uninstalling first.
+
+### Building it yourself
+
+See [Building from source](#building-from-source) below. It needs JDK 21, Gradle and the Android SDK, and takes a few minutes.
+
 ## Quick start
 
 ### 1. Receiver on the TV
 
-1. Install the receiver APK (see [Building](#building)) on the TV, for example with `adb install`.
+1. Install the receiver APK on the TV (see [Installation](#installation)).
 2. Open **S-Tube Drop** on the TV. Set a port and a password, and tap **Save & (re)start**.
 3. Allow **Display over other apps** for S-Tube Drop (the app has a button for it). Android needs this to let a background app open SmartTube.
 4. Check that the **Target app** is your SmartTube build: `app.smarttube.fdroid` (F-Droid, the default) or `com.teamsmart.videomanager.tv` (Play Store).
@@ -51,7 +76,7 @@ The receiver's screen shows its URLs, the certificate fingerprint and the last f
 
 ### 2a. Phone: S-Tube Drop Sender
 
-1. Install the sender APK on the phone.
+1. Install the sender APK on the phone (see [Installation](#installation)).
 2. Open it and enter the TV's **IP address**, **port** and **password**. Leave **HTTPS** on and **Request method** on POST.
 3. Tap **Trust certificate…**, compare the fingerprint with the one shown on the TV, and confirm. This is needed once for each address.
 4. Tap **Test connection**; it should say *Connected*.
@@ -59,7 +84,7 @@ The receiver's screen shows its URLs, the certificate fingerprint and the last f
 
 ### 2b. Browser: Firefox / LibreWolf extension
 
-1. Install the extension (see [Installing the extension](#installing-the-extension)).
+1. Install the extension from [addons.mozilla.org](https://addons.mozilla.org/en-US/firefox/addon/s-tube-drop/) (or see [Installing the extension from source](#installing-the-extension-from-source)).
 2. Open its **Preferences** (in `about:addons`) and enter the TV's IP address, port and password. HTTPS is on by default.
 3. Click **Trust certificate…**, accept the browser's certificate warning once, come back and click **Test connection**.
 4. Open a YouTube video and click the toolbar button.
@@ -108,7 +133,7 @@ curl -k 'https://TV-IP:8765/?url=https%3A%2F%2Fyoutu.be%2FVIDEO_ID&t=changeme'
 - If you reinstall the receiver after clearing its data, it makes a new certificate. The senders will warn that the certificate changed; trust it again.
 - Do not expose the port to the internet.
 
-## Building
+## Building from source
 
 Requirements: **JDK 21** (newer JDKs are too new for this Gradle version), **Gradle 8.14** and the Android SDK (compile SDK 35). The repository has no Gradle wrapper.
 
@@ -141,12 +166,15 @@ Keep the keystore safe: an app can only be updated in place if it is signed with
 
 ```sh
 adb connect TV-IP:PORT          # wireless debugging; the port changes, check the TV's developer options
-adb install -r android_receiver/app/build/outputs/apk/release/stube_receiver.apk
+adb install -r stube_receiver.apk      # the file from the release; for your own build use
+                                       # android_receiver/app/build/outputs/apk/release/stube_receiver.apk
 ```
 
-## Installing the extension
+On the TV, wireless debugging is under Settings → Device Preferences → About → tap *Build* seven times, then Developer options → Wireless debugging. The menu names differ between TV makers.
 
-The extension is plain JavaScript: there is nothing to build, only to package.
+## Installing the extension from source
+
+Most people should install the extension from [addons.mozilla.org](https://addons.mozilla.org/en-US/firefox/addon/s-tube-drop/). To run your own copy, note that the extension is plain JavaScript: there is nothing to build, only to package.
 
 ```sh
 cd firefox_extension && zip -r ../stubedrop-firefox.xpi . -x '.*'
