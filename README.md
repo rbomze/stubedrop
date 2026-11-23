@@ -62,7 +62,7 @@ The APKs are signed with a personal key and are not on Google Play. A build you 
 
 See [Building from source](#building-from-source) below. It needs JDK 21, Gradle and the Android SDK, and takes a few minutes.
 
-## Quick start
+## Setup
 
 ### 1. Receiver on the TV
 
