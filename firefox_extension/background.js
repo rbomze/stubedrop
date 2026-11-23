@@ -20,8 +20,19 @@ browser.runtime.onInstalled.addListener(() => {
   });
 });
 
-function notify(msg) {
-  browser.notifications.create({ type: "basic", title: "S-Tube Drop", message: msg, iconUrl: "icons/icon.svg" });
+// Feedback for the right-click menu, which has no popup: a short badge on the
+// toolbar button, with the message as its tooltip.
+const DEFAULT_TITLE = "Send this video to the TV (S-Tube Drop)";
+let badgeTimer;
+function flash(text, color, msg) {
+  browser.action.setBadgeText({ text });
+  browser.action.setBadgeBackgroundColor({ color });
+  browser.action.setTitle({ title: msg });
+  clearTimeout(badgeTimer);
+  badgeTimer = setTimeout(() => {
+    browser.action.setBadgeText({ text: "" });
+    browser.action.setTitle({ title: DEFAULT_TITLE });
+  }, 6000);
 }
 
 async function showPreferences(warning) {
@@ -30,21 +41,20 @@ async function showPreferences(warning) {
 }
 
 async function handleSend(url) {
-  if (!isVideoUrl(url)) return notify("Open a video, short or playlist on YouTube first.");
+  if (!isVideoUrl(url)) return flash("!", "#d33", "That link isn't a video, short or playlist.");
   const r = await sendDrop(await loadCfg(), url);
   switch (r.kind) {
     case "ok":
       await browser.storage.local.remove("warning");
-      return notify(r.msg);
+      return flash("✓", "#2a9d4b", r.msg);
     case "config": // not configured yet
     case "auth":   // wrong password
       return showPreferences(r.msg);
     default:       // TV unreachable etc.
-      return notify("⚠ " + r.msg);
+      return flash("!", "#d33", r.msg);
   }
 }
 
-browser.action.onClicked.addListener((tab) => handleSend(tab.url));
 browser.contextMenus.onClicked.addListener((info) => {
   if (info.menuItemId === "drop-link") handleSend(info.linkUrl);
 });

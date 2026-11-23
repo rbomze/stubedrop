@@ -1,0 +1,5 @@
+:root { color-scheme: dark; }
+body { width: 280px; margin: 0; padding: 12px 14px; display: flex; gap: 12px; align-items: center; background: #161a2e; color: #e8eaf5; font: 13px system-ui, sans-serif; }
+img { width: 32px; height: 32px; flex: none; }
+p { margin: 0; line-height: 1.4; }
+.ok { color: #6be08a; } .err { color: #ff8a92; }
