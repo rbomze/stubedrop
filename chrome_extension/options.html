@@ -1,0 +1,31 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><link rel="stylesheet" href="options.css"></head>
+<body>
+  <header><img src="icons/icon.svg" alt=""><h1>S-Tube Drop</h1></header>
+  <p id="warn" hidden></p>
+  <p class="hint">Open a video on YouTube and click the droplet icon in the toolbar (pin it from the puzzle-piece Extensions menu) to play it in SmartTube on your TV.</p>
+
+  <h2>Target</h2>
+  <label>TV IP address <span class="dim">(shown in the S-Tube Drop app on the TV)</span><input id="ip" placeholder="e.g. 192.168.1.50" autocomplete="off"></label>
+  <label>Port <span class="dim">(default 8765)</span><input id="port" type="number" min="1" max="65535"></label>
+  <label>Password / token <span class="dim">(default changeme)</span><input id="token" autocomplete="off"></label>
+
+  <label>Request method <span class="dim">(POST sends the link in the request body, so it needs no URL-escaping; GET puts it in the URL)</span>
+    <select id="method"><option value="POST">POST</option><option value="GET">GET</option></select></label>
+
+  <label class="check"><input type="checkbox" id="https"> Use HTTPS <span class="dim">(recommended: encrypts the password; the TV's certificate is self-signed)</span></label>
+  <div id="trustBox">
+    <p id="certStatus"></p>
+    <button id="trust" type="button">Trust certificate…</button>
+    <span class="dim">Opens the TV's address. On the warning page click Advanced, then “Proceed … (unsafe)”, and return here.</span>
+  </div>
+
+  <button id="test" type="button">Test connection</button> <span id="testResult"></span>
+
+  <h2>Effective URL</h2>
+  <code id="url"></code>
+  <script src="shim.js"></script>
+  <script src="common.js"></script>
+  <script src="options.js"></script>
+  <p class="dim" id="ver"></p>
+</body></html>

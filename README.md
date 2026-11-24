@@ -9,7 +9,7 @@ Send a YouTube video from your phone or browser to [SmartTube](https://github.co
  └──────────────────-──┘  ├────────────────────────▶ │ TV: S-Tube Drop receiver │──▶ SmartTube 
  ┌──────────────────-──┐  │  on your local network   └──────────────────────────┘    plays it
  │ Firefox / LibreWolf │──┘
- │  toolbar button     │
+ │ + Chrome / Chromium │
  └───────────────────-─┘
 ```
 
@@ -22,6 +22,7 @@ Everything stays on your own network. There is no cloud service and no account.
 | [`android_receiver/`](android_receiver) | **S-Tube Drop**: runs on the TV, listens for links and opens them in SmartTube | 0.10 |
 | [`android_sender/`](android_sender) | **S-Tube Drop Sender**: Android phone app; share a YouTube link to it and it goes to the TV | 0.10 |
 | [`firefox_extension/`](firefox_extension) | Firefox / LibreWolf extension: a toolbar button that sends the current video | 0.13 |
+| [`chrome_extension/`](chrome_extension) | The same extension for Chrome, Chromium, Brave and Edge (Manifest V3) | 0.13 |
 
 You need the receiver plus at least one sender. Any other client works too (see [Protocol](#protocol)), for example the [HTTP Shortcuts](https://http-shortcuts.rmy.ch/) app or `curl`.
 
@@ -35,7 +36,7 @@ You need the receiver plus at least one sender. Any other client works too (see 
 - **Privacy:** the receiver keeps only the last 5 events, in memory. Nothing is written to disk and it is cleared when the app stops.
 - **Test link:** sending `testurl` instead of a link checks the connection, password and certificate without starting a video.
 - **Sender app:** a share target for YouTube links, configurable like the extension, with certificate pinning (you confirm the TV's SHA-256 fingerprint once).
-- **Extension:** the toolbar button is only active on pages with a playable video; there is also a right-click entry on YouTube links. Results are shown in the popup, with no OS notifications. It asks only for `tabs`, `storage` and `contextMenus`.
+- **Extension:** the toolbar button is only active on pages with a playable video; the Firefox version also has a right-click entry on YouTube links. Results are shown in the popup, with no OS notifications. It asks only for `tabs`, `storage` and `contextMenus`.
 
 ## Installation
 
@@ -54,6 +55,7 @@ Download the files from the [latest release](https://github.com/rbomze/stubedrop
   - Copy the file to a USB stick and open it with a file manager app on the TV.
   - Use a sideloading app on the TV, such as *Downloader*.
 - **Firefox / LibreWolf:** install the extension from Mozilla: <https://addons.mozilla.org/en-US/firefox/addon/s-tube-drop/>.
+- **Chrome / Chromium / Brave / Edge:** the extension is not in the Chrome Web Store. Load it as an unpacked extension: open `chrome://extensions`, switch on **Developer mode**, click **Load unpacked** and pick the `chrome_extension` folder (from a clone of this repository, or unzipped from `stubedrop-chrome.zip` if one is attached to the release). It stays installed across restarts.
 - **Optional check:** compare the file's SHA-256 (`shasum -a 256 stube_receiver.apk`) with the checksums in the release notes.
 
 The APKs are signed with a personal key and are not on Google Play. A build you make yourself is signed with your own key, so it cannot be installed over a release build (or the other way round) without uninstalling first.
@@ -89,7 +91,16 @@ The receiver's screen shows its URLs, the certificate fingerprint and the last f
 3. Click **Trust certificate…**, accept the browser's certificate warning once, come back and click **Test connection**.
 4. Open a YouTube video and click the toolbar button.
 
-### 2c. Anything else
+### 2c. Browser: Chrome / Chromium / Brave / Edge extension
+
+1. Load the `chrome_extension` folder (see [Installation](#installation)) and pin the droplet from the puzzle-piece **Extensions** menu so the button is always visible.
+2. Open the extension's **Preferences** (right-click the button → *Options*) and enter the TV's IP address, port and password. HTTPS is on by default.
+3. Click **Trust certificate…**. The browser shows a *Your connection is not private* page: click **Advanced**, then **Proceed to … (unsafe)**. Come back and click **Test connection**.
+4. Open a YouTube video and click the toolbar button.
+
+Chrome remembers your *Proceed* decision only for a limited time. If sending later fails with a certificate message, repeat step 3.
+
+### 2d. Anything else
 
 Use HTTP Shortcuts, a script, or `curl`: see the protocol below.
 
@@ -185,6 +196,16 @@ Release Firefox and LibreWolf only keep extensions that Mozilla has signed:
 - **Try it:** open `about:debugging#/runtime/this-firefox` → **Load Temporary Add-on…** and pick `firefox_extension/manifest.json`. It disappears when the browser restarts.
 - **Keep it:** sign it as an *unlisted* add-on on [addons.mozilla.org](https://addons.mozilla.org/developers/) (free, automated), download the signed `.xpi` and install it from `about:addons` → gear icon → **Install Add-on From File…**. Raise `version` in `manifest.json` for every new upload.
 
+## Installing the Chrome extension from source
+
+There is nothing to build. Use **Load unpacked** on the `chrome_extension` folder (see [Installation](#installation)), or pack it for sharing:
+
+```sh
+cd chrome_extension && zip -r ../stubedrop-chrome.zip . -x '.*'
+```
+
+The Chrome Web Store needs a developer account (one-time fee) and a review. The Chrome version has no right-click entry on links: Chrome does not apply your certificate exception to a service worker's own requests, and the right-click path would have needed one.
+
 ## Troubleshooting
 
 | Symptom | Likely cause |
@@ -195,6 +216,8 @@ Release Firefox and LibreWolf only keep extensions that Mozilla has signed:
 | The video doesn't start, but the TV answers `ok` | The **Display over other apps** permission is missing, or the target package doesn't match your SmartTube build |
 | `launch failed` in the receiver log | SmartTube isn't installed under the package name set in **Target app** |
 | The extension's button is grey | The current tab isn't a YouTube video, playlist, short or live page |
+| Chrome: no button in the toolbar | Pin it from the puzzle-piece **Extensions** menu |
+| Chrome: *not reachable* although the TV is on | The *Proceed* decision for the certificate expired: open Preferences, click **Trust certificate…** again |
 
 ## Project layout
 
@@ -202,6 +225,7 @@ Release Firefox and LibreWolf only keep extensions that Mozilla has signed:
 android_receiver/   Java, no AndroidX: foreground service, raw HTTP server, TLS via SSLEngine
 android_sender/     Java, no AndroidX: share target, settings screen, certificate pinning
 firefox_extension/  Manifest V3: background event page, popup, preferences page
+chrome_extension/   The same for Chrome: background service worker, hidden page that sends the links
 ```
 
 Both Android apps build their screens in code and have no dependencies beyond the Android SDK.

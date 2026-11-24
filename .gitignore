@@ -5,3 +5,4 @@ build/
 local.properties
 *.xpi
 .DS_Store
+*.zip
